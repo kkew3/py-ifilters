@@ -30,9 +30,9 @@ There are six different atomic patterns: a) single, b) prefix, c) suffix,
 d) inclusive range, e) exclusive range and f) all. The regex each atomic
 pattern should match against is shown below:
 
-- single: `^(-)?[0-9]+$`
-- prefix: `^:(-)?[0-9]+`
-- suffix: `^(-)?[0-9]+:`
+- single: `^-?[0-9]+$`
+- prefix: `^:-?[0-9]+`
+- suffix: `^-?[0-9]+:`
 - inclusive range: `^-?[0-9]+--?[0-9]+$`
 - exclusive range: `^-?[0-9]+:-?[0-9]+$`
 - all: `:`
@@ -53,4 +53,14 @@ Example Usage
 [4, 5, 6, 7]
 >>> list(filter(isp('[-3],[:]'), [(x, 4) for x in range(-5, 1)]))
 [(-3, 1)]
+```
+
+Installation
+------------
+
+This package requires `Python 3.5` or above.
+
+
+```bash
+pip install ifilters
 ```
