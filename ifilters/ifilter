@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+import sys
+import argparse
+from pyparsing import ParseException
+from ifilters import IntSeqPredicate
+
+
+def delimiter_str(string: str) -> bool:
+    if not string:
+        raise argparse.ArgumentTypeError('DELIMITER must not be empty')
+    if ('\\n' in string) or ('\\r' in string):
+        raise argparse.ArgumentTypeError('DELIMITER must not contain newline'
+                                         ' or carriage return')
+    return string
+
+
+def make_parser():
+    parser = argparse.ArgumentParser(
+        description='Delete integers passed from stdin that don\'t match '
+                    'against the provided pattern. For example, use with '
+                    '`seq\' in coreutils to output a list of integers '
+                    'satisfying the provided pattern. Return code: '
+                    '0) success; 1) pattern parsing error; 2) error parsing '
+                    'input from stdin; 4) integer sequence length not '
+                    'matching the pattern.')
+    parser.add_argument('-v', '--invert-match', dest='invert_match',
+                        action='store_true',
+                        help='delete integers matching the pattern instead')
+    parser.add_argument('-d', '--delimiter', type=delimiter_str,
+                        help='the field delimiter to separate fields in an '
+                             'integer tuple; should not contain `\\r\' or '
+                             '`\\n\'; default to whitespace characters')
+    parser.add_argument('-L', '--suppress-length-mismatch',
+                        dest='suppress_length_mismatch', action='store_true',
+                        help='do not raise error on length mismatch, e.g. '
+                             'expecting two integers as per pattern '
+                             '`[2],[4]\' but got only one integer per line, '
+                             'and instead treat it as a normal match failure')
+    parser.add_argument('pattern', help='the integer pattern')
+    return parser
+
+
+def main():
+    args = make_parser().parse_args()
+    try:
+        isp = IntSeqPredicate(args.pattern)
+    except ParseException as err:
+        print('Parse error: {}'.format(err), file=sys.stderr)
+        sys.exit(1)
+    for line in sys.stdin:
+        try:
+            ints = tuple(map(int, line.strip().split(args.delimiter)))
+        except ValueError as err:
+            print('{} at line: {}'.format(err, line.strip()))
+            sys.exit(2)
+        try:
+            matched = isp(ints)
+        except ValueError as err:
+            if args.suppress_length_mismatch:
+                matched = False
+            else:
+                print(err)
+                sys.exit(4)
+        if args.invert_match != matched:
+            sys.stdout.write(line)
+
+
+if __name__ == '__main__':
+    main()
