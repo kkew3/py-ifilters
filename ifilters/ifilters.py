@@ -131,7 +131,7 @@ class IntSeqPredicate:
                 err = 'Expecting integer or length-1 int sequence'
             else:
                 err = ('Expecting length-{} int sequence'
-                       .format(self.predicates))
+                       .format(len(self.predicates)))
             raise ValueError('{}, but got {}'.format(err, value))
         return all(any(pr(val) for pr in prs)
                    for prs, val in zip(self.predicates, value))
