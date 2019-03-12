@@ -66,6 +66,13 @@ pip install ifilters
 ```
 
 
+About Implementation
+--------------------
+
+Why to use callable object over closure?
+Closure does not work well with `pickle`, thus not pickleable and not parallelizable.
+
+
 ifilter (attached executable)
 =============================
 
