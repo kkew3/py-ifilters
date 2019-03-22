@@ -73,79 +73,8 @@ Why to use callable object over closure?
 Closure does not work well with `pickle`, thus not pickleable and not parallelizable.
 
 
-ifilter (attached executable)
-=============================
 
-Installation
-------------
+Related command line tool
+=========================
 
-There are many ways to install and use in Python-free environment.
-For example,
-
-```bash
-git clone https://github.com/kkew3/py-ifilters
-cd py-ifilters
-python3 -m virtualenv rt
-. rt/bin/activate
-pip install -r requirements.txt
-pip install pyinstaller
-pyinstaller ifilters/ifilter
-deactivate
-
-# assuming that "$PREFIX" is the directory to place the utility and is in PATH
-(
-	ifilter_path="$(pwd)/dist/ifilter/ifilter";
-	cd "$PREFIX";
-	ln -s "$ifilter_path" ifilter;
-)
-```
-
-Detailed help
--------------
-
-> Copied from `ifilter --help`
-
-```plain
-usage: range2nums [-h] [-v] [-d DELIMITER] [-L] pattern
-
-Delete integers passed from stdin that don't match against the provided
-pattern. For example, use with `seq' in coreutils to output a list of integers
-satisfying the provided pattern. Return code: 0) success; 1) pattern parsing
-error; 2) error parsing input from stdin; 4) integer sequence length not
-matching the pattern.
-
-positional arguments:
-  pattern               the integer pattern
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -v, --invert-match    delete integers matching the pattern instead
-  -d DELIMITER, --delimiter DELIMITER
-                        the field delimiter to separate fields in an integer
-                        tuple; should not contain `\r' or `\n'; default to
-                        whitespace characters
-  -L, --suppress-length-mismatch
-                        do not raise error on length mismatch, e.g. expecting
-                        two integers as per pattern `[2],[4]' but got only one
-                        integer per line, and instead treat it as a normal
-                        match failure
-```
-
-Example usage
--------------
-
-Assuming that `ifilter` is in PATH. Denote the prompt as `prompt> `.
-
-```bash
-prompt> seq 1 10 | ifilter -v 3,4,7
-1
-2
-5
-6
-8
-9
-10
-prompt> printf '%s\n' {1..3},{2..4} | ifilter -d, '[3],[3:]'
-3,3
-3,4
-```
+The sub-project of this repo: [range2nums](https://github.com/kkew3/range2nums.git)
