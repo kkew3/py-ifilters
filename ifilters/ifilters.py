@@ -6,6 +6,8 @@ import typing
 
 __all__ = [
     'IntSeqPredicate',
+    'IntSeqIter',
+    'UnboundedPredicateError',
 ]
 
 IntOrISeq = typing.Union[int, typing.Sequence[int]]
