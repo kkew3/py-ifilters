@@ -55,3 +55,4 @@ Example Usage
 """
 
 from ifilters.ifilters import IntSeqPredicate
+from ifilters.ifilters import IntSeqIter

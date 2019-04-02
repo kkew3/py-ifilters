@@ -1,6 +1,6 @@
 from math import inf
 import re
-from itertools import chain
+import itertools
 import bisect
 import typing
 
@@ -155,7 +155,7 @@ class IntSeqPredicate:
                     predicates[i].extend((adnf, next_adnf))
 
         # flatten DNFs
-        self.__fpredicates = [list(chain(*x)) for x in predicates]
+        self.__fpredicates = [list(itertools.chain(*x)) for x in predicates]
 
     @staticmethod
     def __to_iseq(value: IntOrISeq) -> typing.Sequence[int]:
@@ -232,3 +232,52 @@ class IntSeqPredicate:
         Returns ``True`` if ``self`` matches at least one valid input
         """
         return all(self.__fpredicates)
+
+
+class UnboundedPredicateError(ValueError):
+    pass
+
+class IntSeqIter:
+    """
+    Make int/int-seq iterator from predicate implying a upper- and
+    lower-bounded finite set of integers or integer sequences.
+
+    >>> list(IntSeqIter('3-4,7-10', use_int_if_possible=True))
+    [3, 4, 7, 8, 9, 10]
+    >>> list(IntSeqIter('3-4,6'))
+    [(3,), (4,), (6,)]
+    >>> list(IntSeqIter(''))
+    []
+    """
+    def __init__(self, predicate: typing.Union[str, IntSeqPredicate],
+                 use_int_if_possible: bool = False):
+        """
+        :param predicate: the predicate object or predication expression
+        :param use_int_if_possible: if ``predicate`` implies a one dimension
+               int-sequence pattern, let ``__iter__`` returns an iterator
+               of ``int`` rather than an iterator of singleton ``int tuple``s.
+        :raise UnboundedPredicateError: if ``predicate`` implies unbounded
+               language
+        """
+        if not isinstance(predicate, IntSeqPredicate):
+            predicate = IntSeqPredicate(predicate)
+
+        ifs = predicate.infimums
+        sps = predicate.supremums
+        if not ifs or not sps:
+            self.__ds = None
+        elif -inf in ifs or inf in sps:
+            raise ValueError('Iterator undefined for infinite set')
+        else:
+            self.__ds = [range(a, b) for a, b in zip(ifs, sps)]
+        self.as_int_if_possible = use_int_if_possible
+        self.predicate = predicate
+
+    def __iter__(self):
+        if self.__ds is None:
+            it = iter(())
+        elif len(self.__ds) == 1 and self.as_int_if_possible:
+            it = filter(self.predicate, self.__ds[0])
+        else:
+            it = filter(self.predicate, itertools.product(*self.__ds))
+        return it
