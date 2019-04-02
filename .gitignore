@@ -6,3 +6,5 @@ rt/
 MANIFEST
 build/
 *.spec
+.idea/
+requirements-dev.txt
