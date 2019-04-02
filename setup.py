@@ -2,9 +2,6 @@ from distutils.core import setup
 setup(
     name='ifilters',
     packages=['ifilters'],
-    install_requires = [
-        'pyparsing',
-    ],
     version='0.9b2',
     license='MIT',
     description='Make integer/int-sequence predicator using numpy-like advanced indexing grammar',
