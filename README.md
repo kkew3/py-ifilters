@@ -60,6 +60,27 @@ Example Usage
 [(-3, 1)]
 ```
 
+More usage copied from doctest:
+
+```python
+>>> IntSeqPredicate('4,5,7,9,2-5,-3-0')  # DNF in __repr__
+IntSeqPredicate({[-3,1) U [2,6) U [7,8) U [9,10)}_0)
+>>> isp = IntSeqPredicate('4,5,7')  # predicate integers
+>>> isp(7), isp(8)
+(True, False)
+>>> isp = IntSeqPredicate('[:],[3]')  # predicate int-sequences
+>>> isp((4, 3)), isp([4, 3])
+(True, True)
+>>> bool(IntSeqPredicate('0'))  # matching something (only zero here)
+True
+>>> bool(IntSeqPredicate(''))  # not matching any integers
+False
+>>> IntSeqPredicate('7:2') == IntSeqPredicate('')  # {x|7<=x<2} is empty
+True
+>>> IntSeqPredicate('4') == IntSeqPredicate('4:5,7-1')
+True
+```
+
 Installation
 ------------
 
