@@ -44,6 +44,11 @@ range matches all integers within range :math:`[a, b]`. An atomic exclusive
 range matches all integers within range :math:`[a, b)`. An atomic all matches
 all integers.
 
+Overview of the syntax (thanks [REGEXPER](https://regexper.com/)):
+
+![regex flowgraph](regex.svg)
+
+
 Example Usage
 -------------
 
