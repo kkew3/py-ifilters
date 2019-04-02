@@ -49,3 +49,13 @@ def test_all():
     predicate = IntSeqPredicate(':')
     assert all(predicate(x) for x in testset)
     assert all(predicate([x]) for x in testset)
+
+
+def test_uc1():
+    predicate = IntSeqPredicate('3-4,6-8,7-19,0-4')
+    assert list(filter(predicate, range(20))) == list(range(5)) + list(range(6, 20))
+
+
+def test_uc2():
+    predicate = IntSeqPredicate('[:],[3]')
+    assert predicate((4, 3))
