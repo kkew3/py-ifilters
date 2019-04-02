@@ -53,32 +53,57 @@ Example Usage
 -------------
 
 ```python
->>> from ifilters import IntSeqPredicate as isp
->>> list(filter(isp('4-10'), range(8)))
-[4, 5, 6, 7]
->>> list(filter(isp('[-3],[:]'), [(x, 4) for x in range(-5, 1)]))
-[(-3, 1)]
+from ifilters import IntSeqPredicate
+list(filter(IntSeqPredicate('4-10'), range(8)))
+# --> [4, 5, 6, 7]
+list(filter(IntSeqPredicate('[-3],[:]'), [(x, 4) for x in range(-5, 1)]))
+# --> [(-3, 1)]
+
+IntSeqPredicate('4,5,7,9,2-5,-3-0')  # DNF in __repr__
+# --> IntSeqPredicate({[-3,1) U [2,6) U [7,8) U [9,10)}_0)
+
+isp = IntSeqPredicate('4,5,7')  # predicate integers
+assert isp(7)
+assert not isp(8)
+
+isp = IntSeqPredicate('[:],[3]')  # predicate int-sequences
+assert isp((4, 3))
+assert isp([4, 3])
+
+assert IntSeqPredicate('0')  # matching something (only zero here)
+assert not IntSeqPredicate('')  # not matching any integers
+
+assert IntSeqPredicate('7:2') == IntSeqPredicate('')  # {x|7<=x<2} is empty
+assert IntSeqPredicate('4') == IntSeqPredicate('4:5,7-1')
 ```
 
-More usage copied from doctest:
+Attached convenient iterator to traverse the set implied by an `IntSeqPredicate`: `IntSeqIter`.
 
-```python
->>> IntSeqPredicate('4,5,7,9,2-5,-3-0')  # DNF in __repr__
-IntSeqPredicate({[-3,1) U [2,6) U [7,8) U [9,10)}_0)
->>> isp = IntSeqPredicate('4,5,7')  # predicate integers
->>> isp(7), isp(8)
-(True, False)
->>> isp = IntSeqPredicate('[:],[3]')  # predicate int-sequences
->>> isp((4, 3)), isp([4, 3])
-(True, True)
->>> bool(IntSeqPredicate('0'))  # matching something (only zero here)
-True
->>> bool(IntSeqPredicate(''))  # not matching any integers
-False
->>> IntSeqPredicate('7:2') == IntSeqPredicate('')  # {x|7<=x<2} is empty
-True
->>> IntSeqPredicate('4') == IntSeqPredicate('4:5,7-1')
-True
+> Copied from help(IntSeqIter)
+
+```
+class IntSeqIter(builtins.object)
+ |  Make int/int-seq iterator from predicate implying a upper- and
+ |  lower-bounded finite set of integers or integer sequences.
+ |  
+ |  >>> list(IntSeqIter('3-4,7-10', use_int_if_possible=True))
+ |  [3, 4, 7, 8, 9, 10]
+ |  >>> list(IntSeqIter('3-4,6'))
+ |  [(3,), (4,), (6,)]
+ |  >>> list(IntSeqIter(''))
+ |  []
+ |  
+ |  Methods defined here:
+ |  
+ |  __init__(self, predicate:Union[str, ifilters.ifilters.IntSeqPredicate], use_int_if_possible:bool=False)
+ |      :param predicate: the predicate object or predication expression
+ |      :param use_int_if_possible: if ``predicate`` implies a one dimension
+ |             int-sequence pattern, let ``__iter__`` returns an iterator
+ |             of ``int`` rather than an iterator of singleton ``int tuple``s.
+ |      :raise UnboundedPredicateError: if ``predicate`` implies unbounded
+ |             language
+ |  
+ |  __iter__(self)
 ```
 
 Installation
@@ -91,13 +116,15 @@ This package requires `Python 3.5` or above.
 pip install ifilters
 ```
 
+Mechanism
+---------
 
-About Implementation
---------------------
-
-Why to use callable object over closure?
-Closure does not work well with `pickle`, thus not pickleable and not parallelizable.
-
+Given a pattern `[C1,C2,C3,...,Cn],...`, where `Ci` is one of the atomic patterns described above,
+and given an integer `x`, instead of making comparison test against each `Ci` sequentially,
+the `ifilters` module first reduces the `n` patterns into `k (k<=n)` non-empty and disjoint ranges.
+Then a binary search is performed along the sorted list of range endpoints.
+Assuming that a `predicate` is only built once and is used to match many integer/integer sequences afterwards,
+the overall time complexity would be much smaller than a simple comparison strategy.
 
 
 Related command line tool
