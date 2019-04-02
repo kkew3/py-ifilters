@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
     name='ifilters',
     packages=['ifilters'],
-    version='0.9b2',
+    version='1.0',
     license='MIT',
     description='Make integer/int-sequence predicator using numpy-like advanced indexing grammar',
     author='Kaiwen Wu',
