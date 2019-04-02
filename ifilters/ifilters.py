@@ -165,6 +165,28 @@ class IntSeqPredicate:
             value = [value]
         return value
 
+    @property
+    def infimums(self) -> typing.Optional[typing.List]:
+        """
+        Infimum for each dimension. If ``self`` matches empty set, the
+        infimum is undefined, thus returns None.
+        """
+        try:
+            return [x[0] for x in self.__fpredicates]
+        except IndexError:
+            return None
+
+    @property
+    def supremums(self):
+        """
+        Supremem for each dimension. If ``self`` matches empty set, the
+        supremum is undefined, thus returns None.
+        """
+        try:
+            return [x[-1] for x in self.__fpredicates]
+        except IndexError:
+            return None
+
     def __call__(self, value: IntOrISeq) -> bool:
         value = self.__to_iseq(value)
         xn = len(self.__fpredicates)
