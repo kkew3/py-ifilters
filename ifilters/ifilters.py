@@ -7,7 +7,6 @@ __all__ = [
     'IntSeqPredicate',
 ]
 
-
 IntOrISeq = typing.Union[int, typing.Sequence[int]]
 IPredicate = typing.Callable[[IntOrISeq], bool]
 
@@ -40,9 +39,11 @@ class _AtomSinglePredicate:
     def __call__(self, value: int) -> bool:
         return self.ref == value
 
+
 class _AtomNilPredicate:
     def __call__(self, _) -> bool:
         return False
+
 
 class _AtomPrefixPredicate:
     def __init__(self, ref: int) -> None:
@@ -51,6 +52,7 @@ class _AtomPrefixPredicate:
     def __call__(self, value: int) -> bool:
         return value < self.ref
 
+
 class _AtomSuffixPredicate:
     def __init__(self, ref: int) -> None:
         self.ref = ref
@@ -58,13 +60,15 @@ class _AtomSuffixPredicate:
     def __call__(self, value: int) -> bool:
         return value >= self.ref
 
+
 class _AtomIRangePredicate:
     def __init__(self, refs: int, reft: int) -> None:
         self.refs = refs
         self.reft = reft
 
     def __call__(self, value: int) -> bool:
-        return self.refs <= value and value <= self.reft
+        return self.refs <= value <= self.reft
+
 
 class _AtomXRangePredicate:
     def __init__(self, refs: int, reft: int) -> None:
@@ -72,11 +76,13 @@ class _AtomXRangePredicate:
         self.reft = reft
 
     def __call__(self, value: int) -> bool:
-        return self.refs <= value and value < self.reft
+        return self.refs <= value < self.reft
+
 
 class _AtomAllPredicate:
     def __call__(self, _) -> bool:
         return True
+
 
 class IntSeqPredicate:
     """
@@ -92,6 +98,7 @@ class IntSeqPredicate:
     >>> isp((4, 3))
     True
     """
+
     def __init__(self, pattern: str) -> None:
         parser = grammar()
         matches: pp.ParseResults = parser.parseString(pattern)
@@ -112,14 +119,17 @@ class IntSeqPredicate:
 
     @staticmethod
     def __ty2pr(ty: str, args: typing.List[str]) -> IPredicate:
+        # ``args`` IS being used, in ``eval`` for lazy evaluation
         return eval({
-            's': '_AtomSinglePredicate(int(args[0]))',
-            'pf': '_AtomPrefixPredicate(int(args[0]))',
-            'sf': '_AtomSuffixPredicate(int(args[0]))',
-            'ir': '_AtomIRangePredicate(int(args[0]), int(args[1]))',
-            'xr': '_AtomXRangePredicate(int(args[0]), int(args[1]))',
-            'a': '_AtomAllPredicate()',
-        }[ty])
+                        's': '_AtomSinglePredicate(int(args[0]))',
+                        'pf': '_AtomPrefixPredicate(int(args[0]))',
+                        'sf': '_AtomSuffixPredicate(int(args[0]))',
+                        'ir': ('_AtomIRangePredicate(int(args[0]), '
+                               'int(args[1]))'),
+                        'xr': ('_AtomXRangePredicate(int(args[0]), '
+                               'int(args[1]))'),
+                        'a': '_AtomAllPredicate()',
+                    }[ty])
 
     def __call__(self, value: IntOrISeq) -> bool:
         try:
