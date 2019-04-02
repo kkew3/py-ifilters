@@ -1,3 +1,6 @@
+from math import inf
+from itertools import chain
+import bisect
 import typing
 
 import pyparsing as pp
@@ -8,7 +11,18 @@ __all__ = [
 ]
 
 IntOrISeq = typing.Union[int, typing.Sequence[int]]
-IPredicate = typing.Callable[[IntOrISeq], bool]
+
+_DNFAtom = typing.Optional[typing.Tuple[typing.Optional[int],
+                                        typing.Optional[int]]]
+"""
+    - None             empty set
+    - (-inf, inf)      universe set
+    - (-inf, b)        { x | x < b }
+    - (a, inf)         { x | x >= a }
+    - (a, b)           { x | a <= a < b }
+"""
+
+_DNF = typing.List[_DNFAtom]
 
 
 def grammar() -> pp.ParserElement:
@@ -32,58 +46,6 @@ def grammar() -> pp.ParserElement:
     return compose
 
 
-class _AtomSinglePredicate:
-    def __init__(self, ref: int) -> None:
-        self.ref = ref
-
-    def __call__(self, value: int) -> bool:
-        return self.ref == value
-
-
-class _AtomNilPredicate:
-    def __call__(self, _) -> bool:
-        return False
-
-
-class _AtomPrefixPredicate:
-    def __init__(self, ref: int) -> None:
-        self.ref = ref
-
-    def __call__(self, value: int) -> bool:
-        return value < self.ref
-
-
-class _AtomSuffixPredicate:
-    def __init__(self, ref: int) -> None:
-        self.ref = ref
-
-    def __call__(self, value: int) -> bool:
-        return value >= self.ref
-
-
-class _AtomIRangePredicate:
-    def __init__(self, refs: int, reft: int) -> None:
-        self.refs = refs
-        self.reft = reft
-
-    def __call__(self, value: int) -> bool:
-        return self.refs <= value <= self.reft
-
-
-class _AtomXRangePredicate:
-    def __init__(self, refs: int, reft: int) -> None:
-        self.refs = refs
-        self.reft = reft
-
-    def __call__(self, value: int) -> bool:
-        return self.refs <= value < self.reft
-
-
-class _AtomAllPredicate:
-    def __call__(self, _) -> bool:
-        return True
-
-
 class IntSeqPredicate:
     """
     Make predicate on integer or a sequence of integers according to the given
@@ -102,46 +64,85 @@ class IntSeqPredicate:
     def __init__(self, pattern: str) -> None:
         parser = grammar()
         matches: pp.ParseResults = parser.parseString(pattern)
-        predicates: typing.List[typing.List[IPredicate]] = []
         if not matches.asList():
-            predicates.append([_AtomNilPredicate()])
+            predicates = [[]]
         elif matches.asDict():
-            predicates.append([self.__ty2pr(*x) for x in
-                               matches.asDict().items()])
+            predicates = [[self.__populate_adnf(*x)
+                           for x in matches.asDict().items()]]
         else:
+            predicates = []
             for i, m in enumerate(matches):
                 if not m.asDict():
                     raise ValueError('Too many quotes at integer pattern-{}'
                                      .format(i))
-                predicates.append([self.__ty2pr(*x) for x in
-                                   m.asDict().items()])
-        self.predicates = predicates
+                predicates.append([self.__populate_adnf(*x)
+                                   for x in m.asDict().items()])
+
+        # now, the ith element of ``predicates`` is a DNF assertion for the
+        # ith element of the incoming integer sequence
+
+        # pre-processing -- removing empty and universe ADNF
+        for i in range(len(predicates)):
+            predicates[i] = list(filter(None, predicates[i]))
+            if (-inf, inf) in predicates[i]:
+                predicates[i] = [(-inf, inf)]
+            # now predicates[i] must be one of the three cases:
+            # 1. []
+            # 2. [(-inf, inf)]
+            # 3. [..., adnf, ...]
+
+        # simplifying the third case for each DNF
+        for i in range(len(predicates)):
+            if not predicates[i] or predicates[i] == [(-inf, inf)]:
+                continue
+            _p = sorted(predicates[i])
+            predicates[i] = [_p.pop(0)]  # this must hold
+            while _p:
+                adnf = predicates[i].pop()
+                next_adnf = _p.pop(0)
+                # assert adnf[0] <= next_adnf[0], due to ``sorted``
+                if next_adnf[0] <= adnf[1]:
+                    adnf = (adnf[0], max(adnf[1], next_adnf[1]))
+                    predicates[i].append(adnf)
+                else:
+                    predicates[i].extend((adnf, next_adnf))
+            # now predicates[i] must be one of the two cases:
+            # 1. []
+            # 2. [..., adnf_i, ..., adnf_j, ...], such that adnf_i and adnf_j
+            #    are disjoint
+
+        # flatten DNFs
+        self.fpredicates = [list(chain(*x)) for x in predicates]
 
     @staticmethod
-    def __ty2pr(ty: str, args: typing.List[str]) -> IPredicate:
-        # ``args`` IS being used, in ``eval`` for lazy evaluation
-        return eval({
-                        's': '_AtomSinglePredicate(int(args[0]))',
-                        'pf': '_AtomPrefixPredicate(int(args[0]))',
-                        'sf': '_AtomSuffixPredicate(int(args[0]))',
-                        'ir': ('_AtomIRangePredicate(int(args[0]), '
-                               'int(args[1]))'),
-                        'xr': ('_AtomXRangePredicate(int(args[0]), '
-                               'int(args[1]))'),
-                        'a': '_AtomAllPredicate()',
-                    }[ty])
+    def __populate_adnf(ty: str, args: typing.List[str]) -> _DNFAtom:
+        return {
+            's': lambda _a: (int(_a[0]), int(_a[0]) + 1),
+            'pf': lambda _a: (-inf, int(_a[0])),
+            'sf': lambda _a: (int(_a[0]), inf),
+            'ir': lambda _a: (int(_a[0]), int(_a[1]) + 1),
+            'xr': lambda _a: (int(_a[0]), int(_a[1])),
+            'a': lambda _a: (-inf, inf),
+        }[ty](args)
 
-    def __call__(self, value: IntOrISeq) -> bool:
+    @staticmethod
+    def __to_iseq(value: IntOrISeq) -> typing.Sequence[int]:
         try:
             _ = iter(value)
         except TypeError:
             value = [value]
-        if len(self.predicates) != len(value):
-            if len(self.predicates) == 1:
+        return value
+
+    def __call__(self, value: IntOrISeq) -> bool:
+        value = self.__to_iseq(value)
+        xn = len(self.fpredicates)
+        if xn != len(value):
+            if xn == 1:
                 err = 'Expecting integer or length-1 int sequence'
             else:
-                err = ('Expecting length-{} int sequence'
-                       .format(len(self.predicates)))
+                err = 'Expecting length-{} int sequence'.format(xn)
             raise ValueError('{}, but got {}'.format(err, value))
-        return all(any(pr(val) for pr in prs)
-                   for prs, val in zip(self.predicates, value))
+        for fpr, val in zip(self.fpredicates, value):
+            if bisect.bisect(fpr, val) % 2 == 0:
+                return False
+        return True
